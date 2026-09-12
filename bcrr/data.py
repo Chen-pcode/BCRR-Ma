@@ -26,9 +26,15 @@ def resolve_split(data_root: str | Path, dataset: str, split: str, roots: dict[s
         actual = "val" if split == "test" else split
         return base / actual / "images", base / actual / "masks"
     if key in {"ph2", "ph2dataset"}:
-        base = Path(roots.get("ph2", root / "PH2Dataset"))
-        candidates = [base / "ph2" / "test", base / "test", root / "PH2Dataset" / "ph2" / "test", root / "ph2" / "test"]
-        actual = next((item for item in candidates if (item / "images").exists()), candidates[0])
+        configured = roots.get("ph2")
+        bases = []
+        if configured:
+            bases.append(Path(configured))
+        bases.extend([root / "PH2Dataset", root / "ph2dataset", root / "ph2", root])
+        candidates = []
+        for base in bases:
+            candidates.extend([base / "ph2" / "test", base / "PH2Dataset" / "ph2" / "test", base / "test"])
+        actual = next((item for item in candidates if (item / "images").exists() and (item / "masks").exists()), candidates[0])
         return actual / "images", actual / "masks"
     raise ValueError(f"Unknown dataset: {dataset}")
 
@@ -94,4 +100,3 @@ class SkinDataset(Dataset):
         if random.random() < 0.8:
             image = np.clip(image * np.random.uniform(0.85, 1.15, (1, 1, 3)) + np.random.uniform(-0.05, 0.05, (1, 1, 3)), 0, 1)
         return image.copy(), mask.copy()
-

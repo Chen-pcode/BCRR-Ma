@@ -50,23 +50,15 @@ class FallbackSSM(nn.Module):
 
     def __init__(self, channels: int):
         super().__init__()
-        self.input = nn.Linear(channels, channels)
-        self.output = nn.Linear(channels, channels)
-        self.decay = nn.Parameter(torch.zeros(channels))
+        self.dw = nn.Conv1d(channels, channels, 5, padding=2, groups=channels, bias=False)
+        self.output = nn.Conv1d(channels, channels, 1, bias=False)
 
     def forward(self, tokens: torch.Tensor, reset: torch.Tensor | None = None) -> torch.Tensor:
-        state = tokens.new_zeros(tokens.shape[0], tokens.shape[-1])
-        alpha = torch.sigmoid(self.decay)[None, :]
-        outputs = []
-        for index in range(tokens.shape[1]):
-            candidate = torch.tanh(self.input(tokens[:, index]))
-            if reset is None:
-                state = (1.0 - alpha) * state + alpha * candidate
-            else:
-                reset_t = reset[:, index]
-                state = (1.0 - alpha * reset_t) * state + alpha * reset_t * candidate
-            outputs.append(state)
-        return self.output(torch.stack(outputs, dim=1)) + tokens
+        sequence = tokens.transpose(1, 2)
+        result = self.output(torch.tanh(self.dw(sequence))).transpose(1, 2)
+        if reset is not None:
+            result = result * (0.5 + 0.5 * reset)
+        return result + tokens
 
 
 class SharedScanCore(nn.Module):

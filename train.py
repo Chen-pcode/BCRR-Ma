@@ -38,6 +38,7 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--amp", action="store_true")
     parser.add_argument("--deterministic", action="store_true")
     parser.add_argument("--save-predictions", action="store_true")
+    parser.add_argument("--skip-fps", action="store_true", help="Skip one-time FPS benchmarking before training.")
     parser.add_argument("--no-boundary-loss", action="store_true")
     parser.add_argument("--no-gate-loss", action="store_true")
     parser.add_argument("--no-contour-loss", action="store_true")
@@ -83,13 +84,16 @@ def main() -> None:
     params = count_params(model)
     flops = estimate_flops(model, args.image_size, device)
     efficiency = {"params": params, "params_m": params / 1e6, "flops": flops, "flops_g": flops / 1e9, "model_size_mb": model_size_mb(model)}
-    try:
-        efficiency["fps"] = measure_fps(model, args.image_size, device, steps=10, warmup=2)
-    except Exception as error:
-        efficiency["fps_error"] = str(error)
+    if not args.skip_fps:
+        try:
+            efficiency["fps"] = measure_fps(model, args.image_size, device, steps=10, warmup=2)
+        except Exception as error:
+            efficiency["fps_error"] = str(error)
+    official_mamba = any(getattr(module, "official", False) for module in model.modules())
+    efficiency["mamba_backend"] = "official_mamba" if official_mamba else "vectorized_pytorch_fallback"
     metadata = {**vars(args), "device": str(device), "model": args.model, "train_count": len(train_set), "val_count": len(val_set), **efficiency}
     write_json(output / "config.json", metadata)
-    log(f"start model={args.model} device={device} train={len(train_set)} val={len(val_set)} params={efficiency['params_m']:.4f}M flops={efficiency['flops_g']:.4f}G", log_path)
+    log(f"start model={args.model} device={device} backend={efficiency['mamba_backend']} train={len(train_set)} val={len(val_set)} params={efficiency['params_m']:.4f}M flops={efficiency['flops_g']:.4f}G", log_path)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs, eta_min=args.lr * 0.01)
@@ -145,4 +149,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

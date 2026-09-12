@@ -28,6 +28,10 @@ From this directory:
 python train.py --data-root ../data --model bcrr_full --epochs 2 --batch-size 2 --image-size 128 --workers 0 --save-predictions
 ```
 
+For a Kaggle smoke run, add `--skip-fps` to avoid the one-time benchmark before training. The log records whether `official_mamba` or the vectorized PyTorch fallback is active; install a CUDA-compatible `mamba-ssm` build for the official path.
+
+The PH2 resolver accepts `PH2Dataset`, `ph2dataset`, `ph2`, and the common `*/ph2/test/{images,masks}` layouts. If PH2 is not attached, omit it explicitly with `--test-datasets isic2017`.
+
 The model uses official `mamba-ssm` when it is available on CUDA. Otherwise a dependency-free recurrent SSM fallback is used so the data, loss, metrics, checkpoint and visualization pipeline can be tested on CPU.
 
 ## Full controlled ablations
