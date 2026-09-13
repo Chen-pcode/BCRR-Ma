@@ -25,7 +25,8 @@ def main() -> None:
     parser.add_argument("--val-dataset", default="isic2018")
     parser.add_argument("--test-datasets", nargs="*", default=["isic2017", "PH2"])
     parser.add_argument("--output-root", default="./outputs/ablation_isic2018")
-    parser.add_argument("--models", nargs="*", default=list(ABLATIONS))
+    parser.add_argument("--models", "--model", dest="models", nargs="*", default=list(ABLATIONS),
+                        help="Architecture variants to run; --model is accepted as a compatibility alias.")
     parser.add_argument("--loss-ablations", nargs="*", default=list(LOSS_ABLATIONS))
     parser.add_argument("--seeds", nargs="*", type=int, default=[42, 1234, 2026])
     parser.add_argument("--epochs", type=int, default=300)

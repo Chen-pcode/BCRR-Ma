@@ -307,4 +307,7 @@ ABLATIONS: dict[str, dict] = {
 def get_model(name: str) -> BCRRMambaUNet:
     if name not in ABLATIONS:
         raise ValueError(f"Unknown model '{name}'. Choices: {', '.join(ABLATIONS)}")
-    return BCRRMambaUNet(**BASE, **ABLATIONS[name])
+    # Merge defaults before expansion so an ablation can override a default
+    # such as ``mamba_stages`` without passing the same keyword twice.
+    config = {**BASE, **ABLATIONS[name]}
+    return BCRRMambaUNet(**config)
